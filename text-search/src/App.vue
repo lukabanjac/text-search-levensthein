@@ -1,12 +1,12 @@
 <template>
 	<div id="app">
 		<b-container>
-			<h2>Search text</h2>
+			<h2 style="text-weight: bold; color: pink; font-weight: bold;">Search text</h2>
 			<h5>With having fat-fingers like ćevapčići </h5>
 
 			
 			<b-input-group prepend="Phrase:" class="mt-3">
-				<b-form-input v-model="phrase"></b-form-input>
+				<b-form-input style="background: lightgray;" v-model="phrase"></b-form-input>
 				<b-input-group-append>
 					<b-button variant="success" @click="addToPhraseList(phrase)">Search</b-button>
 				</b-input-group-append>
@@ -20,29 +20,18 @@
 			
 				
 
-			<p ref="para" class="mt-4">
-								Far out in the uncharted backwaters of the unfashionable end of 
-				the western spiral arm of the Galaxy lies a small unregarded yellow 
-				sun. 
-				Orbiting this at a distance of roughly ninety`two million miles is an 
-				utterly insignificant little blue green planet whose ape`descended life 
-				forms are so amazingly primitive that they still think digital watches 
-				are a pretty neat idea. 
-				This planet has ʹ or rather had ʹ a problem, which was this: most 
-				of the people on it were unhappy for pretty much of the time. Many 
-				solutions were suggested for this problem, but most of these were 
-				largely concerned with the movements of small green pieces of paper, 
-				which is odd because on the whole it wasn't the small green pieces of 
-				paper that were unhappy. 
+			<p ref="para" v-html="styled_paragraph_text" class="mt-4">
+				{{styled_paragraph_text}}
 			</p>
 
 			
-			<b-table class="mt-5" hover :items="items" :fields="fields" style="color: lightgrey"></b-table>
+			<b-table small striped class="mt-5" hover :items="items" :fields="fields" style="color: lightgrey"></b-table>
 		</b-container>
 	</div>
 </template>
 
 <script>
+import txt from 'raw-loader!./assets/text.txt';
 
 export default {
 	name: 'App',
@@ -53,42 +42,54 @@ export default {
 				text: 'insignificant little blue green planet',
 				phrase: '',
 				phraseList: [],
+				occouring_word_index: [],
+				paragraph_text: txt,
+				styled_paragraph_text: txt,
+				score_scaling: 2 //odprilike koliko gresaka po rijeci u recenici moze biti
 			}
 		},
 	methods: {
-		addToPhraseList(text) {
+		addToPhraseList(inputed_phrase) {
+			let phrase = this.cleanInputText(inputed_phrase)
 			var includes = false
 			for (let i = 0; i < this.phraseList.length; i++) {
-				if (this.phraseList[i].phrase == text) {
+				if (this.phraseList[i].phrase == phrase) {
 					includes = true
 				}
 			}
 
-			if (text == '' || includes) {
+			if (phrase == '' || includes) {
 				alert("Input is empty or already included entered!")
 			} else {	
-				this.phraseList.push({ "phrase": text })
-				var found = this.search(text)
+				this.phraseList.push({ "phrase": phrase })
+				var found = this.search(phrase)
 				if(found) {
-					this.items.push({ "phrase": text, "in_text?": "Yes"})
+					this.items.push({ "phrase": phrase, "in_text?": "Yes"})
 				} else {
-					this.items.push({ "phrase": text, "in_text?": "No"})
+					this.items.push({ "phrase": phrase, "in_text?": "No"})
 				}
 			}
 
 
 		},
 		search(text) {
-			var p = this.$refs.para.innerHTML.split(" ")
-			var t = text.split(" ")
+			//var p = this.$refs.para.innerHTML.split(" ")
+			var p = this.paragraph_text.split(" ");
+			var t = text.split(" ");
 
 			var found = false
 			for (let i = 0;  i < p.length; i++) {
 				var dist = 0
 				dist = this.levensthein(p.slice(i, i + t.length), t)
-				//ne znam koji bi bio optimalan score
-				if (dist < t.length) {
+				// ne znam koji bi bio najoptimalniji score pa sam stavio da mozemo podesavati u odnosu na broj rijeci u recenici
+				if (dist < t.length * this.score_scaling) {
+					this.occouring_word_index.push({ "word": })
 					found = true
+					//hajlajtuj tekst u paragrafu koji ce biti prikazan
+					this.styled_paragraph_text = this.paragraph_text
+					p.splice(i, t.length, "<strong style=\"text-decoration: underline; color: pink;\">", p.slice(i, i + t.length).join(" "), "</strong>")
+					this.styled_paragraph_text = p.join(" ")
+					break;
 				}
 			}
 			return found
@@ -131,6 +132,30 @@ export default {
 			//koja oznacava koliko operacija (add, remove, update) 
 			//bi trebalo da se izvrsi nad prvim stringom da bi bio jednak drugom
 			return matrix[s1.length][s2.length]
+		},
+		cleanInputText(input) {
+			let input_l = input.trim().split("") // skinemo sve razmake sa pocetka i kraja i podijelimo recenicu u listu slova
+			let output_l = []
+			let found = false; // bool koji oznacava da li smo naisli na razmak
+			for (let i = 0; i < input_l.length; i++) { //prolazimo kroz sva slova u recenici
+				if (input_l[i] == " ") { //ako smo naisli na razmak
+					if (!found) { // i nije vise od jedan razmak
+						output_l.push(input_l[i]) //dodaj razmak u listu
+						found = true // podesimo da smo ga nasli, svaki sledeci posle njega ce biti skipovan
+					}
+				} else { //ako smo naisli na slovo
+					output_l.push(input_l[i]) //dodamo slovo u listu
+					found = false // ako je bio razmak prije, vatimo ga na false za nastavak
+				}
+			}
+			return output_l.join("")
+		},
+		highlightFoundText(word_list) {
+			let styled_text = []
+			styled_text.push(word_list.join(" "))
+			styled_text.push("</strong>")
+			styled_text.unshift("<strong style=\"text-decoration: underline; color: pink;\">")
+			return styled_text.join("")
 		}
 	}
 }
@@ -138,7 +163,8 @@ export default {
 
 <style>
 	#app {
-		font-family: Avenir, Helvetica, Arial, sans-serif;
+		/* font-family: Avenir, Helvetica, Arial, sans-serif; */
+		font-family: 'Courier New', monospace;
 		-webkit-font-smoothing: antialiased;
 		-moz-osx-font-smoothing: grayscale;
 		text-align: center;
