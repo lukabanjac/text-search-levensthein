@@ -37,12 +37,12 @@ export default {
 	name: 'App',
 		data() {
 			return {
-				fields: ['phrase', 'in_text?'],
+				fields: ['typed', 'found', 'in_text?', 'times occouring'],
 				items: [],
 				text: 'insignificant little blue green planet',
 				phrase: '',
 				phraseList: [],
-				occouring_word_index: [],
+				occouring_phrases: [],
 				paragraph_text: txt,
 				styled_paragraph_text: txt,
 				score_scaling: 2 //odprilike koliko gresaka po rijeci u recenici moze biti
@@ -62,33 +62,33 @@ export default {
 				alert("Input is empty or already included entered!")
 			} else {	
 				this.phraseList.push({ "phrase": phrase })
-				var found = this.search(phrase)
-				if(found) {
-					this.items.push({ "phrase": phrase, "in_text?": "Yes"})
+				let found = this.search(phrase)
+				if(found != "") {
+					console.log(found)
+					this.items.push({ "typed": phrase,"found": found, "in_text?": "Yes", "times occouring": this.count_word_occ(this.paragraph_text, found, true)})
+					//hajlajtuj tekst u paragrafu koji ce biti prikazan
+					this.highlightText()
 				} else {
-					this.items.push({ "phrase": phrase, "in_text?": "No"})
+					this.items.push({"typed": phrase, "in_text?": "No"})
 				}
 			}
 
 
 		},
 		search(text) {
-			//var p = this.$refs.para.innerHTML.split(" ")
-			var p = this.paragraph_text.split(" ");
-			var t = text.split(" ");
+			let p = this.paragraph_text.split(" ");
+			let t = text.split(" ");
 
-			var found = false
+			let found = ""
 			for (let i = 0;  i < p.length; i++) {
 				var dist = 0
-				dist = this.levensthein(p.slice(i, i + t.length), t)
+				let current_phrase_in_text = p.slice(i, i + t.length)
+				dist = this.levensthein(current_phrase_in_text, t)
 				// ne znam koji bi bio najoptimalniji score pa sam stavio da mozemo podesavati u odnosu na broj rijeci u recenici
 				if (dist < t.length * this.score_scaling) {
-					this.occouring_word_index.push({ "word": })
-					found = true
-					//hajlajtuj tekst u paragrafu koji ce biti prikazan
+					found = current_phrase_in_text.join(" ")
+					
 					this.styled_paragraph_text = this.paragraph_text
-					p.splice(i, t.length, "<strong style=\"text-decoration: underline; color: pink;\">", p.slice(i, i + t.length).join(" "), "</strong>")
-					this.styled_paragraph_text = p.join(" ")
 					break;
 				}
 			}
@@ -150,12 +150,32 @@ export default {
 			}
 			return output_l.join("")
 		},
-		highlightFoundText(word_list) {
-			let styled_text = []
-			styled_text.push(word_list.join(" "))
-			styled_text.push("</strong>")
-			styled_text.unshift("<strong style=\"text-decoration: underline; color: pink;\">")
-			return styled_text.join("")
+		highlightText() {
+			let style_text = this.paragraph_text
+
+			for (let i = 0; i < this.items.length; i++) {
+				let phrase = this.items[i].found
+				let stylzed = "<strong style=\"text-decoration: underline; color: pink;\">" + phrase + "</strong>"
+				style_text = style_text.replaceAll(phrase, stylzed)
+			}
+			this.styled_paragraph_text = style_text
+		},
+		
+		count_word_occ(string, subString, allowOverlapping) {
+			if (subString.length <= 0) return (string.length + 1);
+
+			var n = 0,
+				pos = 0,
+				step = allowOverlapping ? 1 : subString.length;
+
+			while (pos >= 0) {
+				pos = string.indexOf(subString, pos);
+				if (pos >= 0) {
+						n++;
+						pos += step;
+				} else break;
+			}
+			return n;
 		}
 	}
 }
