@@ -54,7 +54,7 @@ export default {
 				let found = this.search(phrase)
 				if(found != "") {
 					this.phraseList.push({ "typed": phrase,"found": found, "in_text?": "Yes", "times occouring": this.count_word_occ(this.paragraph_text, found, false)})
-					this.highlightText()//hajlajtuj tekst u paragrafu koji ce biti prikazan
+					this.highlightText()
 				} else {
 					this.phraseList.push({"typed": phrase, "in_text?": "No"})
 				}
@@ -63,7 +63,6 @@ export default {
 
 		},
 		search(text) {
-
 			let found_word = "" // nadjena rijec
 
 			if (this.paragraph_text.search(text) != -1) { //ako je nasao tacno tu koju smo unijeli, ne radimo levenstajn
@@ -78,7 +77,6 @@ export default {
 					n_operations = this.levensthein(current_phrase_in_text.join(" "), t.join(" "))
 					if (n_operations < t.length * this.score_scaling) {// ne znam koji bi bio najoptimalniji score pa sam stavio da mozemo podesavati u odnosu na broj rijeci u unesenom tekstu
 						found_word = current_phrase_in_text.join(" ")
-						console.log(t.length * this.score_scaling)
 						
 						this.styled_paragraph_text = this.paragraph_text
 						break;
@@ -89,10 +87,6 @@ export default {
 
 		},
 		levensthein(s1, s2) {
-/* 
-			var s1 = l1.join(" ")
-			var s2 = l2.join(" ")
-			 */
 			//inicijalizuj matricu sa jednim vise redom i kolonom (za prefix koji oznacava prazan string)
 			//i ispuni sa nulama
 			let matrix = [];
@@ -155,12 +149,9 @@ export default {
 			this.styled_paragraph_text = style_text
 		},
 		count_word_occ(string, subString, allowOverlapping) {
-			if (subString.length <= 0) return (string.length + 1);
-
 			var n = 0,
 				pos = 0,
 				step = allowOverlapping ? 1 : subString.length;
-
 			while (pos >= 0) {
 				pos = string.indexOf(subString, pos);
 				if (pos >= 0) {
