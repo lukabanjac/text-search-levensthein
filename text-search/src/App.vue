@@ -2,30 +2,22 @@
 	<div id="app">
 		<b-container>
 			<h2 style="text-weight: bold; color: pink; font-weight: bold;">Search text</h2>
-			<h5>With having fat-fingers like ćevapčići </h5>
+			<!-- <h5>With having fat-fingers like ćevapčići </h5> -->
 
 			
 			<b-input-group prepend="Phrase:" class="mt-3">
-				<b-form-input style="background: lightgray;" v-model="phrase"></b-form-input>
+				<b-form-input style="background: lightgray;" v-model="phrase" v-on:keyup.enter="addToPhraseList(phrase)"></b-form-input>
 				<b-input-group-append>
 					<b-button variant="success" @click="addToPhraseList(phrase)">Search</b-button>
 				</b-input-group-append>
 			</b-input-group>
-<!-- 			<ul id="example-1" class="mt-3">
-				<li v-for="item in phraseList" :key="item.phrase">
-					{{ item.phrase }}
-				</li>
-			</ul>
- -->
-			
-				
 
 			<p ref="para" v-html="styled_paragraph_text" class="mt-4">
 				{{styled_paragraph_text}}
 			</p>
 
 			
-			<b-table small striped class="mt-5" hover :items="items" :fields="fields" style="color: lightgrey"></b-table>
+			<b-table small striped class="mt-5" hover :items="phraseList" :fields="fields" style="color: lightgrey"></b-table>
 		</b-container>
 	</div>
 </template>
@@ -38,67 +30,69 @@ export default {
 		data() {
 			return {
 				fields: ['typed', 'found', 'in_text?', 'times occouring'],
-				items: [],
 				text: 'insignificant little blue green planet',
 				phrase: '',
 				phraseList: [],
-				occouring_phrases: [],
 				paragraph_text: txt,
 				styled_paragraph_text: txt,
-				score_scaling: 2 //odprilike koliko gresaka po rijeci u recenici moze biti
+				score_scaling: 2 //odprilike gledano, koliko gresaka po rijeci u recenici moze biti
 			}
 		},
 	methods: {
 		addToPhraseList(inputed_phrase) {
 			let phrase = this.cleanInputText(inputed_phrase)
-			var includes = false
+			var includes = false //da li se unesena fraza vec nalazi u listi
 			for (let i = 0; i < this.phraseList.length; i++) {
-				if (this.phraseList[i].phrase == phrase) {
+				if (this.phraseList[i].typed == phrase) { //check za gore pomenutu vrijednost
 					includes = true
 				}
 			}
 
 			if (phrase == '' || includes) {
-				alert("Input is empty or already included entered!")
+				alert("Input is empty or already typed in!")
 			} else {	
-				this.phraseList.push({ "phrase": phrase })
 				let found = this.search(phrase)
 				if(found != "") {
-					console.log(found)
-					this.items.push({ "typed": phrase,"found": found, "in_text?": "Yes", "times occouring": this.count_word_occ(this.paragraph_text, found, true)})
-					//hajlajtuj tekst u paragrafu koji ce biti prikazan
-					this.highlightText()
+					this.phraseList.push({ "typed": phrase,"found": found, "in_text?": "Yes", "times occouring": this.count_word_occ(this.paragraph_text, found, false)})
+					this.highlightText()//hajlajtuj tekst u paragrafu koji ce biti prikazan
 				} else {
-					this.items.push({"typed": phrase, "in_text?": "No"})
+					this.phraseList.push({"typed": phrase, "in_text?": "No"})
 				}
 			}
 
 
 		},
 		search(text) {
-			let p = this.paragraph_text.split(" ");
-			let t = text.split(" ");
 
-			let found = ""
-			for (let i = 0;  i < p.length; i++) {
-				var dist = 0
-				let current_phrase_in_text = p.slice(i, i + t.length)
-				dist = this.levensthein(current_phrase_in_text, t)
-				// ne znam koji bi bio najoptimalniji score pa sam stavio da mozemo podesavati u odnosu na broj rijeci u recenici
-				if (dist < t.length * this.score_scaling) {
-					found = current_phrase_in_text.join(" ")
-					
-					this.styled_paragraph_text = this.paragraph_text
-					break;
+			let found_word = "" // nadjena rijec
+
+			if (this.paragraph_text.search(text) != -1) { //ako je nasao tacno tu koju smo unijeli, ne radimo levenstajn
+				found_word = text
+				return found_word
+			} else {
+				let p = this.paragraph_text.split(" ");
+				let t = text.split(" ");
+				for (let i = 0;  i < p.length; i++) {
+					var n_operations = 0 // slicnost ukucane rijeci i trenutne kroz koju prolazimo, odnosno broj operacija (add, remove delete) koje se trebaju izvrsiti da bi bile iste
+					let current_phrase_in_text = p.slice(i, i + t.length)
+					n_operations = this.levensthein(current_phrase_in_text.join(" "), t.join(" "))
+					if (n_operations < t.length * this.score_scaling) {// ne znam koji bi bio najoptimalniji score pa sam stavio da mozemo podesavati u odnosu na broj rijeci u unesenom tekstu
+						found_word = current_phrase_in_text.join(" ")
+						console.log(t.length * this.score_scaling)
+						
+						this.styled_paragraph_text = this.paragraph_text
+						break;
+					}
 				}
+				return found_word
 			}
-			return found
-		},
-		levensthein(l1, l2) {
 
+		},
+		levensthein(s1, s2) {
+/* 
 			var s1 = l1.join(" ")
 			var s2 = l2.join(" ")
-			
+			 */
 			//inicijalizuj matricu sa jednim vise redom i kolonom (za prefix koji oznacava prazan string)
 			//i ispuni sa nulama
 			let matrix = [];
@@ -153,14 +147,13 @@ export default {
 		highlightText() {
 			let style_text = this.paragraph_text
 
-			for (let i = 0; i < this.items.length; i++) {
-				let phrase = this.items[i].found
+			for (let i = 0; i < this.phraseList.length; i++) {
+				let phrase = this.phraseList[i].found
 				let stylzed = "<strong style=\"text-decoration: underline; color: pink;\">" + phrase + "</strong>"
 				style_text = style_text.replaceAll(phrase, stylzed)
 			}
 			this.styled_paragraph_text = style_text
 		},
-		
 		count_word_occ(string, subString, allowOverlapping) {
 			if (subString.length <= 0) return (string.length + 1);
 
